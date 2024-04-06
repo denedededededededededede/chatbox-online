@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        #loginPage {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        #loginPage h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        #loginForm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #loginForm label {
+            margin-bottom: 10px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        #loginForm input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+            margin-bottom: 10px;
+        }
+
+        #loginForm button {
+            padding: 8px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #loginForm button:hover {
+            background-color: #0056b3;
+        }
+
+        #chatPage {
+            display: none;
+        }
+
+        #chatContainer {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: 500px;
+            overflow-y: auto;
+        }
+
+        #chatForm {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        #chatForm input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: calc(100% - 100px);
+        }
+
+        #chatForm button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #chatForm button:hover {
+            background-color: #0056b3;
+        }
+
+        .messageBox {
+            margin-bottom: 10px;
+        }
+
+        .messageBox .username {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .messageBox .timestamp {
+            font-size: 0.8em;
+            color: #777;
+        }
+
+        .messageBox .content {
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f0f0f0;
+        }
+
+        .sentMessage {
+            text-align: right;
+        }
+
+        .receivedMessage {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginPage">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required><br><br>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+
+        <div id="chatPage">
+            <div id="chatContainer">
+                <div id="messageContainer"></div> <!-- Container untuk pesan -->
+            </div>
+            <form id="chatForm">
+                <input id="m" autocomplete="off" />
+                <button>Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        var socket = io();
+        var username;
+
+        // Hide chatPage initially
+        $('#chatPage').hide();
+
+        // Submit login form
+        $('#loginForm').submit(function(event) {
+            event.preventDefault();
+            username = $('#username').val();
+            console.log('Username:', username);
+            $('#loginPage').hide();
+            $('#chatPage').show();
+
+            // Broadcast a message to inform other users about the new user
+            socket.emit('new user', { username: username });
+        });
+
+        // Submit form to send a message
+        $('#chatForm').submit(function(){
+            var message = $('#m').val();
+            socket.emit('chat message', { username: username, message: message }); // Send username along with the message
+            $('#m').val('');
+            return false;
+        });
+
+        // Receive messages from server
+        socket.on('chat message', function(data){
+            // Create a new message box element
+            var messageBoxClass = (data.username === username) ? 'sentMessage' : 'receivedMessage';
+            var messageBox = '<div class="messageBox ' + messageBoxClass + '">' + 
+                                 '<div class="username">' + data.username + '</div>' +
+                                 '<div class="content">' + data.message + '</div>' +
+                                 '<div class="timestamp">' + new Date().toLocaleTimeString() + '</div>' +
+                             '</div>';
+            $('#messageContainer').append('<div>' + messageBox + '</div>');
+            // Scroll to the bottom of the message container
+            $('#messageContainer').scrollTop($('#messageContainer')[0].scrollHeight);
+        });
+
+        // Receive new user message from server
+        socket.on('user joined', function(data){
+            var joinMessage = '<div class="messageBox">' +
+                                 '<div class="content">' + data.username + ' telah bergabung di grup chat</div>' +
+                                 '<div class="timestamp">' + new Date().toLocaleTimeString() + '</div>' +
+                             '</div>';
+            $('#messageContainer').append('<div>' + joinMessage + '</div>');
+            // Scroll to the bottom of the message container
+            $('#messageContainer').scrollTop($('#messageContainer')[0].scrollHeight);
+        });
+    </script>
+</body>
+</html>
